@@ -34,29 +34,33 @@ struct SwipeDeckView: View {
                 if vehicleManager.hasMoreVehicles {
                     // Card Stack
                     ZStack {
-                        // Background cards (preview of next 2 cards)
-                        if let nextVehicle = vehicleManager.vehicles.indices.contains(vehicleManager.currentIndex + 1) ?
-                            vehicleManager.vehicles[vehicleManager.currentIndex + 1] : nil {
-                            VehicleCard(
-                                vehicle: nextVehicle,
-                                manager: manager,
-                                financingCalc: financingCalc
-                            )
-                            .scaleEffect(0.95)
-                            .offset(y: 10)
-                            .opacity(0.5)
-                        }
-                        
-                        if let nextNextVehicle = vehicleManager.vehicles.indices.contains(vehicleManager.currentIndex + 2) ?
-                            vehicleManager.vehicles[vehicleManager.currentIndex + 2] : nil {
-                            VehicleCard(
-                                vehicle: nextNextVehicle,
-                                manager: manager,
-                                financingCalc: financingCalc
-                            )
-                            .scaleEffect(0.90)
-                            .offset(y: 20)
-                            .opacity(0.3)
+                        // Background cards (preview of next 2 cards) - only show when not swiping
+                        if abs(offset.width) < 10 {
+                            if let nextVehicle = vehicleManager.vehicles.indices.contains(vehicleManager.currentIndex + 1) ?
+                                vehicleManager.vehicles[vehicleManager.currentIndex + 1] : nil {
+                                VehicleCard(
+                                    vehicle: nextVehicle,
+                                    manager: manager,
+                                    financingCalc: financingCalc
+                                )
+                                .scaleEffect(0.95)
+                                .offset(y: 10)
+                                .opacity(0.5)
+                                .allowsHitTesting(false)
+                            }
+                            
+                            if let nextNextVehicle = vehicleManager.vehicles.indices.contains(vehicleManager.currentIndex + 2) ?
+                                vehicleManager.vehicles[vehicleManager.currentIndex + 2] : nil {
+                                VehicleCard(
+                                    vehicle: nextNextVehicle,
+                                    manager: manager,
+                                    financingCalc: financingCalc
+                                )
+                                .scaleEffect(0.90)
+                                .offset(y: 20)
+                                .opacity(0.3)
+                                .allowsHitTesting(false)
+                            }
                         }
                         
                         // Current card
@@ -68,6 +72,7 @@ struct SwipeDeckView: View {
                             )
                             .offset(offset)
                             .rotationEffect(.degrees(rotation))
+                            .zIndex(1)
                             .gesture(
                                 DragGesture()
                                     .onChanged { gesture in
@@ -103,8 +108,13 @@ struct SwipeDeckView: View {
                     .padding(.horizontal, 60)
                     .padding(.bottom, 30)
                 } else {
-                    // No more vehicles
+                    // No more vehicles - centered completion view
+                    Spacer()
+                    
                     CompleteDeckView(wishlistCount: vehicleManager.wishlist.count)
+                        .transition(.scale.combined(with: .opacity))
+                    
+                    Spacer()
                 }
             }
         }

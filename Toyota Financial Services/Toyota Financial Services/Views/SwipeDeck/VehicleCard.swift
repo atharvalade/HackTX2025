@@ -13,6 +13,8 @@ struct VehicleCard: View {
     @Bindable var financingCalc: FinancingCalculator
     
     @State private var scrollOffset: CGFloat = 0
+    @State private var showAPRInfo = false
+    @State private var showTenureSelector = false
     
     var taxRate: Double {
         manager.locationTaxData.salesTaxPercentage ?? 8.25
@@ -34,18 +36,33 @@ struct VehicleCard: View {
         GeometryReader { geometry in
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    // Vehicle Image
-                    AsyncImage(url: URL(string: vehicle.image_url)) { phase in
+                    // Vehicle Image - Uses preloaded cache
+                    AsyncImage(
+                        url: URL(string: vehicle.image_url),
+                        transaction: Transaction(animation: .easeInOut(duration: 0.3))
+                    ) { phase in
                         switch phase {
                         case .success(let image):
                             image
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
-                        case .failure:
+                                .clipped()
+                                .transition(.opacity)
+                        case .failure(_):
                             placeholderImage
+                                .overlay(alignment: .bottom) {
+                                    Text("Image not available")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(Color.tfsSecondary)
+                                        .padding(8)
+                                }
                         case .empty:
-                            ProgressView()
-                                .frame(height: 250)
+                            ZStack {
+                                Color.tfsSecondaryBackground
+                                ProgressView()
+                                    .tint(Color.tfsRed)
+                            }
+                            .frame(height: 250)
                         @unknown default:
                             placeholderImage
                         }
@@ -91,13 +108,23 @@ struct VehicleCard: View {
                             }
                             
                             HStack(spacing: 8) {
-                                Text(String(format: "%.2f%% APR", financingCalc.getAPR(creditScore: creditScore)))
-                                    .font(.system(size: 14, weight: .semibold))
+                                Button {
+                                    let impactLight = UIImpactFeedbackGenerator(style: .light)
+                                    impactLight.impactOccurred()
+                                    showAPRInfo = true
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Text(String(format: "%.2f%% APR", financingCalc.getAPR(creditScore: creditScore)))
+                                            .font(.system(size: 14, weight: .semibold))
+                                        Image(systemName: "info.circle.fill")
+                                            .font(.system(size: 12, weight: .semibold))
+                                    }
                                     .foregroundStyle(Color.tfsRed)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
                                     .background(Color.tfsRed.opacity(0.1))
                                     .clipShape(Capsule())
+                                }
                                 
                                 Text(financingCalc.getCreditTier(creditScore: creditScore))
                                     .font(.system(size: 14, weight: .semibold))
@@ -107,13 +134,23 @@ struct VehicleCard: View {
                                     .background(Color.tfsGreen.opacity(0.1))
                                     .clipShape(Capsule())
                                 
-                                Text("\(financingCalc.isLeaseMode ? financingCalc.leaseTermMonths : financingCalc.loanTermMonths) mos")
-                                    .font(.system(size: 14, weight: .semibold))
+                                Button {
+                                    let impactLight = UIImpactFeedbackGenerator(style: .light)
+                                    impactLight.impactOccurred()
+                                    showTenureSelector = true
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Text("\(financingCalc.isLeaseMode ? financingCalc.leaseTermMonths : financingCalc.loanTermMonths) mos")
+                                            .font(.system(size: 14, weight: .semibold))
+                                        Image(systemName: "chevron.down")
+                                            .font(.system(size: 10, weight: .semibold))
+                                    }
                                     .foregroundStyle(Color.tfsPrimary)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
                                     .background(Color.tfsSecondaryBackground)
                                     .clipShape(Capsule())
+                                }
                             }
                         }
                         .frame(maxWidth: .infinity)
@@ -180,6 +217,14 @@ struct VehicleCard: View {
         .background(Color.tfsBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 10)
+        .alert("APR Explanation", isPresented: $showAPRInfo) {
+            Button("Got It", role: .cancel) { }
+        } message: {
+            Text("Based on your Equifax credit score of \(creditScore), you qualify for a \(String(format: "%.2f%%", financingCalc.getAPR(creditScore: creditScore))) APR in the \(financingCalc.getCreditTier(creditScore: creditScore)) tier. This rate is competitive and reflects your strong credit profile.")
+        }
+        .sheet(isPresented: $showTenureSelector) {
+            TenureSelector(financingCalc: financingCalc)
+        }
     }
     
     private var placeholderImage: some View {
@@ -282,10 +327,17 @@ struct DownPaymentSlider: View {
             
             Slider(value: $financingCalc.downPaymentPercentage, in: 0...30, step: 5)
                 .tint(Color.tfsRed)
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { _ in
+                            // Prevent card swipe while dragging slider
+                        }
+                )
         }
         .padding(16)
         .background(Color.tfsSecondaryBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .contentShape(Rectangle()) // Make entire area tappable but not swipeable
     }
     
     private func formatCurrency(_ amount: Double) -> String {
@@ -404,19 +456,9 @@ struct VehicleSpecs: View {
                 
                 SpecItem(icon: "car.fill", label: "Body Style", value: vehicle.body_style)
                 
-                SpecItem(icon: "gearshape.fill", label: "Transmission", value: vehicle.transmission)
-                
                 SpecItem(icon: "arrow.triangle.branch", label: "Drivetrain", value: vehicle.drivetrain)
                 
-                SpecItem(icon: "fuelpump.fill", label: "Fuel Type", value: vehicle.fuel)
-                
-                if let mpg = vehicle.mpg_combined_est {
-                    SpecItem(icon: "leaf.fill", label: "MPG (Est.)", value: "\(mpg) combined")
-                }
-                
-                if let evRange = vehicle.ev_range_mi_est {
-                    SpecItem(icon: "bolt.fill", label: "EV Range", value: "\(evRange) mi")
-                }
+                SpecItem(icon: "fuelpump.fill", label: "Powertrain", value: vehicle.powertrain)
             }
         }
         .padding(16)
@@ -463,16 +505,13 @@ struct SpecItem: View {
             year: 2025,
             make: "Toyota",
             model: "Camry",
-            trim: "LE (Hybrid)",
-            msrp_usd: 28400,
+            trim: "LE",
+            msrp_usd_est: 28900,
             horsepower_hp: 225,
             drivetrain: "FWD",
-            fuel: "Hybrid",
-            transmission: "eCVT",
+            powertrain: "Hybrid",
             body_style: "Sedan",
-            mpg_combined_est: 51,
-            ev_range_mi_est: nil,
-            image_url: "https://www.toyota.com/imgix/responsive/images/mlp/colorizer/2025/camry/1L5/1.png"
+            image_url: "https://www.pngplay.com/wp-content/uploads/13/Toyota-Camry-2019-PNG-Photos.png"
         ),
         manager: OnboardingManager(),
         financingCalc: FinancingCalculator()

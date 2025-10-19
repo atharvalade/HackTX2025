@@ -13,14 +13,11 @@ struct Vehicle: Codable, Identifiable {
     let make: String
     let model: String
     let trim: String
-    let msrp_usd: Double
+    let msrp_usd_est: Double
     let horsepower_hp: Int?
     let drivetrain: String
-    let fuel: String
-    let transmission: String
+    let powertrain: String
     let body_style: String
-    let mpg_combined_est: Int?
-    let ev_range_mi_est: Int?
     let image_url: String
     
     var displayName: String {
@@ -31,23 +28,23 @@ struct Vehicle: Codable, Identifiable {
         "\(year) \(make) \(model) \(trim)"
     }
     
+    // For compatibility with existing code
+    var msrp_usd: Double {
+        msrp_usd_est
+    }
+    
     enum CodingKeys: String, CodingKey {
         case year, make, model, trim
-        case msrp_usd
+        case msrp_usd_est
         case horsepower_hp
-        case drivetrain, fuel, transmission
+        case drivetrain, powertrain
         case body_style
-        case mpg_combined_est
-        case ev_range_mi_est
         case image_url
     }
 }
 
-struct VehicleData: Codable {
-    let image_url_template: String
-    let image_notes: String
-    let vehicles: [Vehicle]
-}
+// JSON is now a direct array of vehicles
+typealias VehicleData = [Vehicle]
 
 @Observable
 class VehicleManager {
@@ -55,6 +52,9 @@ class VehicleManager {
     var currentIndex: Int = 0
     var wishlist: [Vehicle] = []
     var denied: [Vehicle] = []
+    
+    private let imageCache = ImageCacheManager.shared
+    private let preloadCount = 5 // Number of images to preload initially
     
     var currentVehicle: Vehicle? {
         guard currentIndex < vehicles.count else { return nil }
@@ -67,29 +67,57 @@ class VehicleManager {
     
     init() {
         loadVehicles()
+        preloadInitialImages()
     }
     
     func loadVehicles() {
         guard let url = Bundle.main.url(forResource: "models", withExtension: "json"),
-              let data = try? Data(contentsOf: url),
-              let vehicleData = try? JSONDecoder().decode(VehicleData.self, from: data) else {
-            print("Failed to load vehicles")
+              let data = try? Data(contentsOf: url) else {
+            print("Failed to load vehicles data")
             return
         }
         
-        vehicles = vehicleData.vehicles
+        do {
+            let decoder = JSONDecoder()
+            vehicles = try decoder.decode([Vehicle].self, from: data)
+            print("Successfully loaded \(vehicles.count) vehicles")
+        } catch {
+            print("Failed to decode vehicles: \(error)")
+        }
+    }
+    
+    /// Preload the first 5 images when the app starts
+    private func preloadInitialImages() {
+        let imagesToPreload = vehicles.prefix(preloadCount).map { $0.image_url }
+        Task { @MainActor in
+            imageCache.preloadImages(urlStrings: Array(imagesToPreload))
+            print("🚀 Preloading first \(imagesToPreload.count) images...")
+        }
+    }
+    
+    /// Preload the next image after a swipe
+    private func preloadNextImage() {
+        let nextIndex = currentIndex + preloadCount
+        if nextIndex < vehicles.count {
+            let nextImageUrl = vehicles[nextIndex].image_url
+            Task { @MainActor in
+                imageCache.preloadImage(urlString: nextImageUrl)
+            }
+        }
     }
     
     func swipeRight() {
         guard let vehicle = currentVehicle else { return }
         wishlist.append(vehicle)
         currentIndex += 1
+        preloadNextImage()
     }
     
     func swipeLeft() {
         guard let vehicle = currentVehicle else { return }
         denied.append(vehicle)
         currentIndex += 1
+        preloadNextImage()
     }
 }
 
