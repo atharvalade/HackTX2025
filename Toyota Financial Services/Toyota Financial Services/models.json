@@ -165,7 +165,7 @@
     "body_style": "SUV",
     "powertrain": "Gasoline",
     "drivetrain": "AWD",
-    "image_url": "https://www.pngplay.com/wp-content/uploads/13/White-Lexus-Download-Free-PNG.png"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/6/66/Lexus_RX_350h_AWD_AL10_Sonic_Quartz_%283%29.jpg"
   },
   {
     "year": 2024,
@@ -177,7 +177,7 @@
     "body_style": "Coupe",
     "powertrain": "Gasoline",
     "drivetrain": "RWD",
-    "image_url": "https://www.pngplay.com/wp-content/uploads/13/Red-Lexus-Transparent-Image.png"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/2/2e/Lexus_LC500_%2843547102872%29.jpg"
   },
   {
     "year": 2024,
@@ -185,11 +185,11 @@
     "model": "NX 350",
     "trim": "Base",
     "msrp_usd_est": 40000,
-    "horsepower_hp": 203,
+    "horsepower_hp": 275,
     "body_style": "SUV",
     "powertrain": "Gasoline",
     "drivetrain": "AWD",
-    "image_url": "https://www.pngplay.com/wp-content/uploads/13/Blue-Lexus-Background-PNG-Image.png"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/c/ca/2024_Lexus_NX.jpg"
   },
   {
     "year": 2024,
@@ -201,7 +201,7 @@
     "body_style": "SUV",
     "powertrain": "Hybrid",
     "drivetrain": "FWD",
-    "image_url": "https://www.pngplay.com/wp-content/uploads/13/Black-Lexus-Free-PNG.png"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/b/b1/Lexus_UX_250h_Genf_2018.jpg"
   },
   {
     "year": 2024,
@@ -213,8 +213,9 @@
     "body_style": "Sedan",
     "powertrain": "Gasoline",
     "drivetrain": "FWD",
-    "image_url": "https://www.pngplay.com/wp-content/uploads/13/Red-Lexus-Download-Free-PNG.png"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/7/7c/Lexus_ES_350_%28GSZ10%29_IMG_4332.jpg"
   },
+
   {
     "year": 2024,
     "make": "Lexus",
@@ -273,7 +274,7 @@
     "body_style": "Sedan",
     "powertrain": "Gasoline",
     "drivetrain": "RWD",
-    "image_url": "https://www.pngplay.com/wp-content/uploads/1/Black-Lexus-PNG-HD-Quality.png"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/e/e6/2021_Lexus_IS_350_F_Sport.jpg"
   },
   {
     "year": 2025,

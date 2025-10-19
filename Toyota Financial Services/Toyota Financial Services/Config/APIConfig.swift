@@ -9,7 +9,7 @@ import Foundation
 
 struct APIConfig {
     /// Gemini API Key - Retrieved from APIKeys.plist
-    static var geminiAPIKey: String? {
+    nonisolated(unsafe) static var geminiAPIKey: String? {
         // Try to load from APIKeys.plist first (gitignored file)
         if let path = Bundle.main.path(forResource: "APIKeys", ofType: "plist"),
            let keys = NSDictionary(contentsOfFile: path) as? [String: String],

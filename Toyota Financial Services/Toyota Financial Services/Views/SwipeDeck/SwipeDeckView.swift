@@ -27,9 +27,13 @@ struct SwipeDeckView: View {
             
             VStack(spacing: 0) {
                 // Header
-                SwipeDeckHeader(wishlistCount: vehicleManager.wishlist.count, showWishlist: $showWishlist)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
+                SwipeDeckHeader(
+                    wishlistCount: vehicleManager.wishlist.count,
+                    tfsScore: manager.tfsScore,
+                    showWishlist: $showWishlist
+                )
+                .padding(.horizontal, 20)
+                .padding(.top, 10)
                 
                 if vehicleManager.hasMoreVehicles {
                     // Card Stack
@@ -176,7 +180,9 @@ struct SwipeDeckView: View {
 
 struct SwipeDeckHeader: View {
     let wishlistCount: Int
+    let tfsScore: Int
     @Binding var showWishlist: Bool
+    @State private var showScoreInfo = false
     
     var body: some View {
         HStack {
@@ -191,6 +197,37 @@ struct SwipeDeckHeader: View {
                 .foregroundStyle(Color.tfsPrimary)
             
             Spacer()
+            
+            // TFS Score Badge
+            Button {
+                let impactLight = UIImpactFeedbackGenerator(style: .light)
+                impactLight.impactOccurred()
+                showScoreInfo = true
+            } label: {
+                HStack(spacing: 6) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("TFS Score")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color.tfsSecondary)
+                        
+                        Text("\(tfsScore)")
+                            .font(.system(size: 20, weight: .black, design: .rounded))
+                            .foregroundStyle(getScoreColor(score: tfsScore))
+                    }
+                    
+                    Image(systemName: "info.circle.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.tfsSecondary.opacity(0.5))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.tfsSecondaryBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+            }
+            .sheet(isPresented: $showScoreInfo) {
+                TFSScoreInfoSheet(score: tfsScore)
+            }
             
             Button {
                 let impactLight = UIImpactFeedbackGenerator(style: .light)
@@ -215,6 +252,18 @@ struct SwipeDeckHeader: View {
             }
         }
         .padding(.vertical, 8)
+    }
+    
+    private func getScoreColor(score: Int) -> Color {
+        let band = TFSScoreCalculator.getScoreBand(score: score)
+        switch band {
+        case .green:
+            return Color.tfsGreen
+        case .yellow:
+            return Color.tfsOrange
+        case .red:
+            return Color.tfsRed
+        }
     }
 }
 

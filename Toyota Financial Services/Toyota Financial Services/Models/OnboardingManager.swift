@@ -20,6 +20,21 @@ class OnboardingManager {
     var plaidFinancialData = PlaidFinancialData()
     var equifaxCreditData = EquifaxCreditData()
     
+    /// Calculate TFS Score based on current financial data
+    var tfsScore: Int {
+        let income = plaidFinancialData.income ?? 100_000
+        let creditScore = equifaxCreditData.creditScore ?? 650
+        let availableMonthly = plaidFinancialData.income != nil ? plaidFinancialData.spendingCapacity : 1000
+        let monthlySavings = plaidFinancialData.income != nil ? plaidFinancialData.monthlySavings : 500
+        
+        return TFSScoreCalculator.calculateScore(
+            income: income,
+            creditScore: creditScore,
+            availableMonthly: availableMonthly,
+            monthlySavings: monthlySavings
+        )
+    }
+    
     enum OnboardingStep: Int, CaseIterable {
         case welcome = 0
         case location = 1
