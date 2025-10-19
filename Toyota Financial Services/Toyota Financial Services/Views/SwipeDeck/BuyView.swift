@@ -13,6 +13,7 @@ struct BuyView: View {
     let manager: OnboardingManager
     @State var financingCalc: FinancingCalculator
     @State private var selectedTab: BuyTab = .overview
+    @State private var showOrderConfirmation = false
     
     var taxRate: Double {
         manager.locationTaxData.salesTaxPercentage ?? 8.25
@@ -165,7 +166,13 @@ struct BuyView: View {
                         .animation(.easeInOut, value: selectedTab)
                         
                         // Pre-Approval CTA
-                        PreApprovalCTA(tfsScore: manager.tfsScore)
+                        PreApprovalCTA(
+                            tfsScore: manager.tfsScore,
+                            isPreApproved: manager.isPreApproved(for: vehicle, financingCalc: financingCalc),
+                            onOrder: {
+                                showOrderConfirmation = true
+                            }
+                        )
                     }
                     .padding(20)
                 }
@@ -184,6 +191,9 @@ struct BuyView: View {
                 }
             }
         }
+        .sheet(isPresented: $showOrderConfirmation) {
+            OrderConfirmationView(vehicle: vehicle)
+        }
     }
     
     private func formatCurrency(_ amount: Double) -> String {
@@ -191,6 +201,80 @@ struct BuyView: View {
         formatter.numberStyle = .currency
         formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: amount)) ?? "$0"
+    }
+}
+
+struct OrderConfirmationView: View {
+    @Environment(\.dismiss) var dismiss
+    let vehicle: Vehicle
+    @State private var showConfetti = false
+    
+    var body: some View {
+        ZStack {
+            Color.tfsBackground.ignoresSafeArea()
+            
+            VStack(spacing: 32) {
+                Spacer()
+                
+                // Success Animation
+                ZStack {
+                    Circle()
+                        .fill(Color.tfsGreen.opacity(0.15))
+                        .frame(width: 140, height: 140)
+                        .scaleEffect(showConfetti ? 1.2 : 0.8)
+                    
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 80, weight: .medium))
+                        .foregroundStyle(Color.tfsGreen)
+                        .scaleEffect(showConfetti ? 1 : 0.5)
+                }
+                
+                VStack(spacing: 16) {
+                    Text("Congratulations!")
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.tfsPrimary)
+                    
+                    Text(vehicle.fullName)
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(Color.tfsRed)
+                    
+                    Text("Your vehicle will be delivered in 12 hours.")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(Color.tfsSecondary)
+                    
+                    Text("Stay outside your garage! 🚗")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(Color.tfsSecondary)
+                        .padding(.top, 8)
+                }
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+                
+                Spacer()
+                
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Done")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(Color.tfsRed)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .padding(.horizontal, 32)
+                .padding(.bottom, 40)
+            }
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                showConfetti = true
+            }
+            
+            let notificationFeedback = UINotificationFeedbackGenerator()
+            notificationFeedback.notificationOccurred(.success)
+        }
     }
 }
 
@@ -788,19 +872,23 @@ struct QuickFactRow: View {
 
 struct PreApprovalCTA: View {
     let tfsScore: Int
+    let isPreApproved: Bool
+    let onOrder: () -> Void
     
     var body: some View {
         VStack(spacing: 16) {
             VStack(spacing: 8) {
-                Image(systemName: "checkmark.seal.fill")
+                Image(systemName: isPreApproved ? "checkmark.seal.fill" : "doc.text.fill")
                     .font(.system(size: 48, weight: .medium))
-                    .foregroundStyle(Color.tfsGreen)
+                    .foregroundStyle(isPreApproved ? Color.tfsGreen : Color.tfsRed)
                 
-                Text("Ready to Proceed")
+                Text(isPreApproved ? "Pre-Approved!" : "Ready to Proceed")
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.tfsPrimary)
                 
-                Text("Based on your TFS Score of \(tfsScore), you're pre-qualified for this vehicle with the rates shown above.")
+                Text(isPreApproved ?
+                     "Congratulations! With your TFS Score of \(tfsScore), you're instantly pre-approved. No additional documentation needed!" :
+                     "Based on your TFS Score of \(tfsScore), you're pre-qualified for this vehicle with the rates shown above.")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Color.tfsSecondary)
                     .multilineTextAlignment(.center)
@@ -810,26 +898,31 @@ struct PreApprovalCTA: View {
             Button {
                 let impactMed = UIImpactFeedbackGenerator(style: .medium)
                 impactMed.impactOccurred()
+                onOrder()
             } label: {
-                Text("Start Application")
+                Text(isPreApproved ? "Order Vehicle" : "Start Application")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 18)
                     .background(
                         LinearGradient(
-                            colors: [Color.tfsRed, Color.tfsRed.opacity(0.8)],
+                            colors: isPreApproved ? [Color.tfsGreen, Color.tfsGreen.opacity(0.8)] : [Color.tfsRed, Color.tfsRed.opacity(0.8)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .shadow(color: Color.tfsRed.opacity(0.4), radius: 12, x: 0, y: 6)
+                    .shadow(color: (isPreApproved ? Color.tfsGreen : Color.tfsRed).opacity(0.4), radius: 12, x: 0, y: 6)
             }
         }
         .padding(24)
-        .background(Color.tfsSecondaryBackground)
+        .background(isPreApproved ? Color.tfsGreen.opacity(0.05) : Color.tfsSecondaryBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(isPreApproved ? Color.tfsGreen.opacity(0.3) : Color.clear, lineWidth: 2)
+        )
     }
 }
 

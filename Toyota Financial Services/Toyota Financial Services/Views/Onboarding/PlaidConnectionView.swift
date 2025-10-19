@@ -330,9 +330,13 @@ struct PlaidConnectionView: View {
                 manager.hasConnectedPlaid = true
                 
                 // Simulate fetched financial data
+                let simulatedIncome = 134217.0
+                let monthlyIncome = simulatedIncome / 12.0
+                let monthlySpending = monthlyIncome * 0.70 // Default to 70% of monthly income
+                
                 manager.plaidFinancialData.updateData(
-                    income: 134217.0,
-                    spending: 7614.0
+                    income: simulatedIncome,
+                    spending: monthlySpending
                 )
                 manager.plaidFinancialData.isLoading = false
             }

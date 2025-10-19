@@ -12,6 +12,7 @@ struct SwipeDeckView: View {
     @State private var vehicleManager = VehicleManager()
     @State private var financingCalc = FinancingCalculator()
     @State private var showWishlist = false
+    @State private var showDemoSettings = false
     @State private var offset = CGSize.zero
     @State private var rotation: Double = 0
     
@@ -24,13 +25,15 @@ struct SwipeDeckView: View {
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
+            .zIndex(0)
             
             VStack(spacing: 0) {
                 // Header
                 SwipeDeckHeader(
                     wishlistCount: vehicleManager.wishlist.count,
                     tfsScore: manager.tfsScore,
-                    showWishlist: $showWishlist
+                    showWishlist: $showWishlist,
+                    showDemoSettings: $showDemoSettings
                 )
                 .padding(.horizontal, 20)
                 .padding(.top, 10)
@@ -121,10 +124,69 @@ struct SwipeDeckView: View {
                     Spacer()
                 }
             }
+            .zIndex(1)
+            
+            // AI Ranking Overlay - on top of everything
+            if vehicleManager.isRanking {
+                RankingLoadingOverlay()
+                    .zIndex(2)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
         }
+        .animation(.easeInOut(duration: 0.3), value: vehicleManager.isRanking)
         .sheet(isPresented: $showWishlist) {
             WishlistView(vehicles: vehicleManager.wishlist, manager: manager, financingCalc: financingCalc)
         }
+        .sheet(isPresented: $showDemoSettings) {
+            DemoSettingsSheet(manager: manager, onApply: {
+                await reRankVehicles()
+            })
+        }
+        .task {
+            // Rank vehicles when view appears
+            await rankVehicles()
+        }
+    }
+    
+    private func reRankVehicles() async {
+        // Reset to first card
+        await MainActor.run {
+            vehicleManager.currentIndex = 0
+            offset = .zero
+            rotation = 0
+        }
+        
+        // Re-rank with new parameters
+        await rankVehicles()
+    }
+    
+    private func rankVehicles() async {
+        let income = manager.plaidFinancialData.income ?? 100_000
+        let creditScore = manager.equifaxCreditData.creditScore ?? 700
+        let availableMonthly = manager.plaidFinancialData.income != nil ? 
+            manager.plaidFinancialData.spendingCapacity : 1000
+        let taxRate = manager.locationTaxData.salesTaxPercentage ?? 8.25
+        
+        // Create a timeout task
+        let timeoutTask = Task {
+            try? await Task.sleep(nanoseconds: 15_000_000_000) // 15 second timeout
+            if vehicleManager.isRanking {
+                print("⚠️ Ranking timeout - forcing completion")
+                await MainActor.run {
+                    vehicleManager.isRanking = false
+                }
+            }
+        }
+        
+        await vehicleManager.rankVehiclesForUser(
+            income: income,
+            creditScore: creditScore,
+            availableMonthly: availableMonthly,
+            taxRate: taxRate
+        )
+        
+        // Cancel timeout if ranking completes
+        timeoutTask.cancel()
     }
     
     private func handleSwipeEnd(_ gesture: DragGesture.Value) {
@@ -182,15 +244,22 @@ struct SwipeDeckHeader: View {
     let wishlistCount: Int
     let tfsScore: Int
     @Binding var showWishlist: Bool
+    @Binding var showDemoSettings: Bool
     @State private var showScoreInfo = false
     
     var body: some View {
         HStack {
-            Image("TFS Logo")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 40, height: 40)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            Button {
+                let impactLight = UIImpactFeedbackGenerator(style: .light)
+                impactLight.impactOccurred()
+                showDemoSettings = true
+            } label: {
+                Image("TFS Logo")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 40, height: 40)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
             
             Text("Swipe Deals")
                 .font(.system(size: 24, weight: .bold, design: .rounded))
@@ -342,6 +411,60 @@ struct CompleteDeckView: View {
                 .multilineTextAlignment(.center)
         }
         .padding(40)
+    }
+}
+
+struct RankingLoadingOverlay: View {
+    @State private var rotation: Double = 0
+    
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.6)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 24) {
+                ZStack {
+                    Circle()
+                        .stroke(Color.tfsSecondaryBackground, lineWidth: 4)
+                        .frame(width: 80, height: 80)
+                    
+                    Circle()
+                        .trim(from: 0, to: 0.7)
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color.tfsRed, Color.tfsRed.opacity(0.3)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                        )
+                        .frame(width: 80, height: 80)
+                        .rotationEffect(.degrees(rotation))
+                        .animation(.linear(duration: 1.0).repeatForever(autoreverses: false), value: rotation)
+                    
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 32, weight: .semibold))
+                        .foregroundStyle(Color.tfsRed)
+                }
+                
+                VStack(spacing: 8) {
+                    Text("AI Personalizing Your Deals")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    
+                    Text("Finding the best vehicles for your budget...")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+            }
+            .padding(40)
+            .background(Color.tfsSecondaryBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+        }
+        .onAppear {
+            rotation = 360
+        }
     }
 }
 

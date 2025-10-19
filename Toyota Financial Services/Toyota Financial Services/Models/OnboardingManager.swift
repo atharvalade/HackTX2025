@@ -35,6 +35,25 @@ class OnboardingManager {
         )
     }
     
+    /// Check if user is pre-approved (affordability < 75% AND TFS Score >= 80)
+    func isPreApproved(for vehicle: Vehicle, financingCalc: FinancingCalculator) -> Bool {
+        let taxRate = locationTaxData.salesTaxPercentage ?? 8.25
+        let creditScore = equifaxCreditData.creditScore ?? 700
+        
+        let monthlyPayment = financingCalc.calculateMonthlyPayment(
+            msrp: vehicle.msrp_usd,
+            creditScore: creditScore,
+            taxRate: taxRate
+        )
+        
+        let availableMonthly = plaidFinancialData.income != nil ?
+            plaidFinancialData.spendingCapacity : 1400
+        
+        let affordabilityRatio = monthlyPayment / availableMonthly
+        
+        return affordabilityRatio < 0.75 && tfsScore >= 80
+    }
+    
     enum OnboardingStep: Int, CaseIterable {
         case welcome = 0
         case location = 1

@@ -32,6 +32,34 @@ struct VehicleCard: View {
         )
     }
     
+    var availableMonthly: Double {
+        manager.plaidFinancialData.income != nil ? 
+            manager.plaidFinancialData.spendingCapacity : 1400
+    }
+    
+    var affordabilityRatio: Double {
+        guard availableMonthly > 0 else { return 1.0 }
+        return monthlyPayment / availableMonthly
+    }
+    
+    var affordabilityStatus: (String, Color) {
+        if affordabilityRatio <= 0.5 {
+            return ("Very Affordable", Color.tfsGreen)
+        } else if affordabilityRatio <= 0.7 {
+            return ("Affordable", Color.tfsGreen)
+        } else if affordabilityRatio <= 0.85 {
+            return ("Moderate Stretch", Color.tfsOrange)
+        } else if affordabilityRatio <= 1.0 {
+            return ("Challenging", Color.tfsRed)
+        } else {
+            return ("Over Budget", Color.tfsRed)
+        }
+    }
+    
+    var affordabilityPercentage: Int {
+        Int((affordabilityRatio * 100).rounded())
+    }
+    
     var body: some View {
         GeometryReader { geometry in
             ScrollView(showsIndicators: false) {
@@ -75,6 +103,41 @@ struct VehicleCard: View {
                             endPoint: .bottom
                         )
                     )
+                    .overlay(alignment: .topTrailing) {
+                        // Affordability Badge - Overlaid on image
+                        HStack(spacing: 6) {
+                            Image(systemName: affordabilityRatio <= 0.7 ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                                .font(.system(size: 12, weight: .bold))
+                            
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text(affordabilityStatus.0)
+                                    .font(.system(size: 11, weight: .bold))
+                                
+                                Text("\(affordabilityPercentage)%")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .opacity(0.85)
+                            }
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            ZStack {
+                                // Glassmorphic background
+                                Color.black.opacity(0.3)
+                                
+                                // Subtle gradient overlay
+                                LinearGradient(
+                                    colors: [affordabilityStatus.1.opacity(0.7), affordabilityStatus.1.opacity(0.5)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            }
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        .padding(12)
+                    }
                     
                     // Card Content
                     VStack(alignment: .leading, spacing: 20) {
@@ -108,23 +171,23 @@ struct VehicleCard: View {
                             }
                             
                             HStack(spacing: 8) {
-                                Button {
-                                    let impactLight = UIImpactFeedbackGenerator(style: .light)
-                                    impactLight.impactOccurred()
-                                    showAPRInfo = true
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Text(String(format: "%.2f%% APR", financingCalc.getAPR(creditScore: creditScore)))
-                                            .font(.system(size: 14, weight: .semibold))
-                                        Image(systemName: "info.circle.fill")
-                                            .font(.system(size: 12, weight: .semibold))
-                                    }
-                                    .foregroundStyle(Color.tfsRed)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
-                                    .background(Color.tfsRed.opacity(0.1))
-                                    .clipShape(Capsule())
+                            Button {
+                                let impactLight = UIImpactFeedbackGenerator(style: .light)
+                                impactLight.impactOccurred()
+                                showAPRInfo = true
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text(String(format: "%.2f%% APR", financingCalc.getAPR(creditScore: creditScore, tfsScore: manager.tfsScore)))
+                                        .font(.system(size: 14, weight: .semibold))
+                                    Image(systemName: "info.circle.fill")
+                                        .font(.system(size: 12, weight: .semibold))
                                 }
+                                .foregroundStyle(Color.tfsRed)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(Color.tfsRed.opacity(0.1))
+                                .clipShape(Capsule())
+                            }
                                 
                                 Text(financingCalc.getCreditTier(creditScore: creditScore))
                                     .font(.system(size: 14, weight: .semibold))
@@ -220,7 +283,7 @@ struct VehicleCard: View {
         .alert("APR Explanation", isPresented: $showAPRInfo) {
             Button("Got It", role: .cancel) { }
         } message: {
-            Text("Based on your Equifax credit score of \(creditScore), you qualify for a \(String(format: "%.2f%%", financingCalc.getAPR(creditScore: creditScore))) APR in the \(financingCalc.getCreditTier(creditScore: creditScore)) tier. This rate is competitive and reflects your strong credit profile.")
+            Text("Based on your TFS Score of \(manager.tfsScore) (which considers your credit score of \(creditScore), income, and payment capacity), you qualify for a \(String(format: "%.2f%%", financingCalc.getAPR(creditScore: creditScore, tfsScore: manager.tfsScore))) APR. This rate reflects your overall financial strength.")
         }
         .sheet(isPresented: $showTenureSelector) {
             TenureSelector(financingCalc: financingCalc)

@@ -52,9 +52,12 @@ class VehicleManager {
     var currentIndex: Int = 0
     var wishlist: [Vehicle] = []
     var denied: [Vehicle] = []
+    var isRanking: Bool = false
+    var rankingError: String?
     
     private let imageCache = ImageCacheManager.shared
     private let preloadCount = 5 // Number of images to preload initially
+    private let rankingService = VehicleRankingService()
     
     var currentVehicle: Vehicle? {
         guard currentIndex < vehicles.count else { return nil }
@@ -67,7 +70,6 @@ class VehicleManager {
     
     init() {
         loadVehicles()
-        preloadInitialImages()
     }
     
     func loadVehicles() {
@@ -83,6 +85,50 @@ class VehicleManager {
             print("Successfully loaded \(vehicles.count) vehicles")
         } catch {
             print("Failed to decode vehicles: \(error)")
+        }
+    }
+    
+    /// Rank vehicles based on user's financial profile using AI
+    func rankVehiclesForUser(
+        income: Double,
+        creditScore: Int,
+        availableMonthly: Double,
+        taxRate: Double
+    ) async {
+        guard !vehicles.isEmpty else { return }
+        
+        await MainActor.run {
+            isRanking = true
+            rankingError = nil
+        }
+        
+        do {
+            let rankedVehicles = try await rankingService.rankVehicles(
+                vehicles: vehicles,
+                income: income,
+                creditScore: creditScore,
+                availableMonthly: availableMonthly,
+                taxRate: taxRate
+            )
+            
+            await MainActor.run {
+                self.vehicles = rankedVehicles
+                self.isRanking = false
+                print("✅ Vehicles ranked successfully!")
+                
+                // Preload images after ranking
+                preloadInitialImages()
+            }
+            
+        } catch {
+            await MainActor.run {
+                self.isRanking = false
+                self.rankingError = error.localizedDescription
+                print("❌ Ranking failed: \(error.localizedDescription)")
+                
+                // Still preload images even if ranking fails
+                preloadInitialImages()
+            }
         }
     }
     
@@ -128,15 +174,19 @@ class FinancingCalculator {
     var loanTermMonths: Int = 60 // 5 years
     var leaseTermMonths: Int = 36 // 3 years
     
-    func getAPR(creditScore: Int) -> Double {
-        if creditScore >= 750 {
-            return 3.99 // Excellent
-        } else if creditScore >= 700 {
-            return 5.49 // Very Good
-        } else if creditScore >= 650 {
-            return 7.99 // Good
+    func getAPR(creditScore: Int, tfsScore: Int = 70) -> Double {
+        // Base APR on TFS Score (more holistic)
+        // Better TFS Score = Better APR
+        if tfsScore >= 85 {
+            return 3.49 // Excellent TFS Score
+        } else if tfsScore >= 75 {
+            return 4.49 // Very Good TFS Score
+        } else if tfsScore >= 65 {
+            return 5.99 // Good TFS Score
+        } else if tfsScore >= 50 {
+            return 8.49 // Fair TFS Score
         } else {
-            return 11.99 // Poor
+            return 11.99 // Poor TFS Score
         }
     }
     

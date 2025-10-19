@@ -77,6 +77,13 @@ class PlaidFinancialData {
     func clearError() {
         self.error = nil
     }
+    
+    func clearData() {
+        self.income = nil
+        self.averageSpending = nil
+        self.isLoading = false
+        self.error = nil
+    }
 }
 
 @Observable
@@ -134,6 +141,23 @@ class EquifaxCreditData {
     }
     
     func clearError() {
+        self.error = nil
+    }
+    
+    func updateCreditData(score: Int, band: String, utilization: Double) {
+        self.creditScore = score
+        self.creditBand = band
+        self.creditUtilization = utilization
+        self.isLoading = false
+    }
+    
+    func clearData() {
+        self.creditScore = nil
+        self.creditBand = nil
+        self.topFactors = []
+        self.accountsOpen = nil
+        self.creditUtilization = nil
+        self.isLoading = false
         self.error = nil
     }
 }

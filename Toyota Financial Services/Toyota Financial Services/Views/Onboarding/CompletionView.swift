@@ -12,6 +12,9 @@ struct CompletionView: View {
     @State private var showContent = false
     @State private var showConfetti = false
     @State private var navigateToSwipeDeck = false
+    @State private var step1Complete = false
+    @State private var step2Complete = false
+    @State private var step3Complete = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -69,7 +72,7 @@ struct CompletionView: View {
                 ProcessingCard(
                     icon: "chart.line.uptrend.xyaxis",
                     title: "Calculating TFS Score",
-                    status: "Complete"
+                    status: step1Complete ? "Complete" : "In Progress"
                 )
                 .opacity(showContent ? 1 : 0)
                 .offset(x: showContent ? 0 : -20)
@@ -77,7 +80,7 @@ struct CompletionView: View {
                 ProcessingCard(
                     icon: "car.fill",
                     title: "Finding Vehicle Matches",
-                    status: "In Progress"
+                    status: step2Complete ? "Complete" : (step1Complete ? "In Progress" : "Pending")
                 )
                 .opacity(showContent ? 1 : 0)
                 .offset(x: showContent ? 0 : -20)
@@ -85,7 +88,7 @@ struct CompletionView: View {
                 ProcessingCard(
                     icon: "dollarsign.circle",
                     title: "Preparing Pre-Approvals",
-                    status: "Pending"
+                    status: step3Complete ? "Complete" : (step2Complete ? "In Progress" : "Pending")
                 )
                 .opacity(showContent ? 1 : 0)
                 .offset(x: showContent ? 0 : -20)
@@ -131,6 +134,25 @@ struct CompletionView: View {
             
             let notificationFeedback = UINotificationFeedbackGenerator()
             notificationFeedback.notificationOccurred(.success)
+            
+            // Animate through the steps
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    step1Complete = true
+                }
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    step2Complete = true
+                }
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    step3Complete = true
+                }
+            }
         }
         .fullScreenCover(isPresented: $navigateToSwipeDeck) {
             SwipeDeckView(manager: manager)

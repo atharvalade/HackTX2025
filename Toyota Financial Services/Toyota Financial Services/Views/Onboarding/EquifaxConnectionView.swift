@@ -19,9 +19,6 @@ struct EquifaxConnectionView: View {
                 .padding(.horizontal, 32)
                 .padding(.top, 20)
             
-            ScrollView {
-                VStack(spacing: 0) {
-            
             Spacer()
             
             // Icon
@@ -63,10 +60,14 @@ struct EquifaxConnectionView: View {
             .opacity(showContent ? 1 : 0)
             .offset(y: showContent ? 0 : 20)
             
-            Spacer()
-            
-            // Credit Data Display or Benefits
-            if manager.equifaxCreditData.hasData {
+            // Scrollable Content Area
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    Spacer()
+                        .frame(height: 20)
+                    
+                    // Credit Data Display or Benefits
+                    if manager.equifaxCreditData.hasData {
                 VStack(spacing: 16) {
                     // Success checkmark
                     HStack(spacing: 8) {
@@ -235,6 +236,11 @@ struct EquifaxConnectionView: View {
                 .padding(.horizontal, 32)
                 .padding(.bottom, 24)
                 .opacity(showContent ? 1 : 0)
+                    }
+                    
+                    Spacer()
+                        .frame(height: 20)
+                }
             }
             
             // Buttons
@@ -307,11 +313,9 @@ struct EquifaxConnectionView: View {
                     }
                 }
             }
-                    .padding(.horizontal, 32)
-                    .padding(.bottom, 40)
-                    .opacity(showContent ? 1 : 0)
-                }
-            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+            .opacity(showContent ? 1 : 0)
         }
         .onAppear {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.1)) {
