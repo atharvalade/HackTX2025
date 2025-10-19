@@ -8,8 +8,10 @@
 import SwiftUI
 
 struct CompletionView: View {
+    let manager: OnboardingManager
     @State private var showContent = false
     @State private var showConfetti = false
+    @State private var navigateToSwipeDeck = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -95,7 +97,7 @@ struct CompletionView: View {
             Button {
                 let impactMed = UIImpactFeedbackGenerator(style: .medium)
                 impactMed.impactOccurred()
-                // Navigate to main app
+                navigateToSwipeDeck = true
             } label: {
                 HStack(spacing: 8) {
                     Text("View My Deals")
@@ -129,6 +131,9 @@ struct CompletionView: View {
             
             let notificationFeedback = UINotificationFeedbackGenerator()
             notificationFeedback.notificationOccurred(.success)
+        }
+        .fullScreenCover(isPresented: $navigateToSwipeDeck) {
+            SwipeDeckView(manager: manager)
         }
     }
 }
@@ -193,6 +198,6 @@ struct ProcessingCard: View {
 }
 
 #Preview {
-    CompletionView()
+    CompletionView(manager: OnboardingManager())
 }
 

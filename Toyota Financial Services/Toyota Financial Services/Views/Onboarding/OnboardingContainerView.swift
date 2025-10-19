@@ -48,7 +48,7 @@ struct OnboardingContainerView: View {
                             removal: .move(edge: .leading).combined(with: .opacity)
                         ))
                 case .complete:
-                    CompletionView()
+                    CompletionView(manager: manager)
                         .transition(.asymmetric(
                             insertion: .scale(scale: 0.8).combined(with: .opacity),
                             removal: .opacity
