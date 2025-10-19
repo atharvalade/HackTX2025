@@ -8,6 +8,7 @@
 import SwiftUI
 
 @Observable
+@MainActor
 class OnboardingManager {
     var currentStep: OnboardingStep = .welcome
     var hasGrantedLocation = false
@@ -16,6 +17,8 @@ class OnboardingManager {
     var showSkipWarning = false
     var skipWarningType: SkipWarningType = .plaid
     var locationTaxData = LocationTaxData()
+    var plaidFinancialData = PlaidFinancialData()
+    var equifaxCreditData = EquifaxCreditData()
     
     enum OnboardingStep: Int, CaseIterable {
         case welcome = 0
